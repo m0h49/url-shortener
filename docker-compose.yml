@@ -12,10 +12,22 @@ services:
       - postgres_data:/var/lib/postgresql
       - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d url_shortener"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:8-alpine
     ports:
       - "56379:6379"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
@@ -27,8 +39,11 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/url_shortener
       REDIS_URL: redis://redis:6379
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 
   frontend:
     build: ./frontend
